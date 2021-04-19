@@ -51,7 +51,7 @@ function ModSettingsUpdate(init_scope)
 end
 
 function ModSettingsGuiCount()
-	return 1
+  return 1
 end
 
 ---------- render settings ----------
