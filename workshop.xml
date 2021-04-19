@@ -1,0 +1,7 @@
+<Mod
+  name="Start With Any Perks"
+  description=""
+  tags="gameplay,quality of life,perks,tweaks,cheats"
+  dont_upload_folders=".vscode"
+  dont_upload_files="README.md"
+/>
