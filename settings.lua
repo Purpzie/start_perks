@@ -1,7 +1,7 @@
 dofile_once("data/scripts/lib/mod_settings.lua")
 dofile_once("data/scripts/perks/perk_list.lua")
 
-local mod_id = "start_with_any_perks"
+local mod_id = "start_perks"
 local settings = {}
 
 local DEFAULT_VALUE = {
@@ -13,7 +13,7 @@ local DEFAULT_VALUE = {
 -- read perk list
 for i, perk in ipairs(perk_list) do
   local setting = {
-    key = table.concat{mod_id, ".", perk.id},
+    key = table.concat{mod_id, ".perk_", perk.id},
     name = GameTextGet(perk.ui_name),
     desc = GameTextGet(perk.ui_description),
     scope = MOD_SETTING_SCOPE_NEW_GAME
@@ -40,6 +40,16 @@ table.sort(
 )
 
 function ModSettingsUpdate(init_scope)
+  --[[
+  local migrations = {}
+  local version = ModSettingGet("start_perks.settings_version")
+  if migrations[version] then
+    migrations[version]()
+  end
+  --]]
+
+  ModSettingSet("start_perks.settings_version", 1)
+
   for _, setting in ipairs(settings) do
     -- set if unset
     ModSettingSetNextValue(setting.key, DEFAULT_VALUE[setting.type], true)
@@ -63,35 +73,25 @@ local function get_id()
 end
 
 function ModSettingsGui(gui, in_main_menu)
-  GuiLayoutBeginHorizontal(gui, 0, 0)
   id = 0
 
-  -- left side
-  GuiLayoutBeginVertical(gui, 0, 0)
-
-  do -- reset button
+  -- reset button
+  do
     GuiColorSetForNextWidget(gui, 0.5, 1, 1, 1)
-    local clicked, right_clicked =
-      GuiButton(gui, get_id(), 0, 0, "(Clear all)")
+    local clicked = GuiButton(gui, get_id(), 0, 0, "Clear all")
+    GuiTooltip(gui, "Reset all perks.", "")
 
     if clicked then
       for _, setting in ipairs(settings) do
         ModSettingRemove(setting.key)
       end
-    elseif right_clicked then
-      for _, setting in ipairs(settings) do
-        ModSettingSetNextValue(
-          setting.key,
-          ({
-            string = "1",
-            number = 1,
-            boolean = true
-          })[setting.type],
-          false
-        )
-      end
     end
   end
+
+  GuiLayoutBeginHorizontal(gui, 0, 0)
+
+  -- left side
+  GuiLayoutBeginVertical(gui, 0, 0)
 
   -- perk names
   for _, setting in ipairs(settings) do
@@ -113,8 +113,6 @@ function ModSettingsGui(gui, in_main_menu)
 
   -- right side
   GuiLayoutBeginVertical(gui, 0, 0)
-  -- (space for reset button)
-  GuiText(gui, 0, 0, " ")
 
   for _, setting in ipairs(settings) do
     local value = ModSettingGetNextValue(setting.key)

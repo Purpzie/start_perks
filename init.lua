@@ -3,12 +3,11 @@ dofile_once("data/scripts/perks/perk.lua")
 dofile_once("data/scripts/perks/perk_list.lua")
 
 function OnPlayerSpawned(player)
-  if GlobalsGetValue("start_with_any_perks.new_game", "0") == "1" then return end
-  GlobalsSetValue("start_with_any_perks.new_game", "1")
+  if GlobalsGetValue("start_perks.new_game", "0") == "1" then return end
+  GlobalsSetValue("start_perks.new_game", "1")
 
-  local x, y = EntityGetTransform(player)
   for _, perk in ipairs(perk_list) do
-    local amount = ModSettingGet("start_with_any_perks." .. perk.id)
+    local amount = ModSettingGet("start_perks.perk_" .. perk.id)
 
     local kind = type(amount)
     if kind == "boolean" then

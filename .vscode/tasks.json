@@ -11,7 +11,7 @@
     {
       "label": "Upload to Steam Workshop",
       "type": "shell",
-      "command": "cd \"C:/Program Files (x86)/Steam/steamapps/common/Noita\" && noita_dev.exe -workshop_upload start_with_any_perks",
+      "command": "cd \"C:/Program Files (x86)/Steam/steamapps/common/Noita\" && noita_dev.exe -workshop_upload start_perks",
       "group": "build",
       "problemMatcher": []
     }
