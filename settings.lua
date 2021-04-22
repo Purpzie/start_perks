@@ -65,31 +65,38 @@ end
 ---------- render perk_settings ----------
 
 local NUM_SETTINGS = #perk_settings
-local ID_RESET = NUM_SETTINGS + 1
-local ID_SEARCH = NUM_SETTINGS + 2
-local ID_SEARCH_CLEAR = NUM_SETTINGS + 3
 
 local search_text = ""
 local num_visible = NUM_SETTINGS
 
+local widget_id = 0
+local function get_id()
+  widget_id = widget_id + 1
+  return widget_id
+end
+
 function ModSettingsGui(gui, in_main_menu)
+  widget_id = 0
   GuiOptionsAdd(gui, GUI_OPTION.DrawActiveWidgetCursorOnBothSides)
+  GuiIdPush(gui, 0)
+
+  -- top row
   GuiLayoutBeginHorizontal(gui, 0, 0)
     -- clear search
     local clicked_clear_search =
-      GuiButton(gui, ID_SEARCH_CLEAR, 0, 0, "Clear search")
+      GuiButton(gui, get_id(), 0, 0, "Clear search")
     -- space
     GuiText(gui, 0, 0, "  ")
     -- reset all
-    if GuiButton(gui, ID_RESET, 0, 0, "Reset all") then
+    if GuiButton(gui, get_id(), 0, 0, "Reset all") then
       for _, setting in ipairs(perk_settings) do
         ModSettingSetNextValue(setting.key, DEFAULT[setting.type], false)
       end
     end
   GuiLayoutEnd(gui)
 
-  -- search
-  local input = GuiTextInput(gui, ID_SEARCH, 0, 0, search_text, 130, 30)
+  -- search box
+  local input = GuiTextInput(gui, get_id(), 0, 0, search_text, 130, 30)
   if clicked_clear_search then input = "" end
   if #input ~= #search_text then
     search_text = input
@@ -115,7 +122,10 @@ function ModSettingsGui(gui, in_main_menu)
     end
   end
 
-  GuiOptionsClear(gui)
+  GuiOptionsRemove(gui, GUI_OPTION.DrawActiveWidgetCursorOnBothSides)
+  GuiIdPop(gui)
+
+  -- main area
   GuiLayoutBeginHorizontal(gui, 0, 0)
     -- icons and labels
     GuiText(gui, 0, 0, "     ") -- space for icons
@@ -144,12 +154,13 @@ function ModSettingsGui(gui, in_main_menu)
     GuiLayoutBeginVertical(gui, 0, 0)
       for id, setting in ipairs(perk_settings) do
         if setting.hidden then goto continue end
+        GuiLayoutAddVerticalSpacing(gui, 2)
+
         local value = ModSettingGetNextValue(setting.key)
         if type(value) ~= setting.type then
           value = DEFAULT[setting.type]
         end
 
-        GuiLayoutAddVerticalSpacing(gui, 2)
         if setting.type == "boolean" then
           local text = value
             and GameTextGet("$option_on")
