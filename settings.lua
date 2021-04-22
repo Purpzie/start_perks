@@ -151,4 +151,12 @@ function ModSettingsGui(gui, in_main_menu)
 
   GuiLayoutEnd(gui)
   GuiLayoutEnd(gui)
+
+  -- prevent mod from covering settings of other mods
+  for _, setting in ipairs(settings) do
+    local spacing = setting.type == "string"
+    if spacing then GuiLayoutAddVerticalSpacing(gui, 1) end
+    GuiText(gui, 0, 0, " ")
+    if spacing then GuiLayoutAddVerticalSpacing(gui, 1) end
+  end
 end
