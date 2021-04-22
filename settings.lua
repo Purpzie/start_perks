@@ -13,6 +13,7 @@ local DEFAULT_VALUE = {
 -- read perk list
 for i, perk in ipairs(perk_list) do
   local setting = {
+    icon = perk.ui_icon,
     key = table.concat{mod_id, ".perk_", perk.id},
     name = GameTextGet(perk.ui_name),
     desc = GameTextGet(perk.ui_description),
@@ -77,9 +78,8 @@ function ModSettingsGui(gui, in_main_menu)
 
   -- reset button
   do
-    GuiColorSetForNextWidget(gui, 0.5, 1, 1, 1)
-    local clicked = GuiButton(gui, get_id(), 0, 0, "Clear all")
-    GuiTooltip(gui, "Reset all perks.", "")
+    local text = GameTextGet("$menuoptions_configurecontrols_reset_all")
+    local clicked = GuiButton(gui, get_id(), 0, 0, text)
 
     if clicked then
       for _, setting in ipairs(settings) do
@@ -89,32 +89,33 @@ function ModSettingsGui(gui, in_main_menu)
   end
 
   GuiLayoutBeginHorizontal(gui, 0, 0)
-
-  -- left side
+  GuiText(gui, 0, 0, "     ") -- space for icons
   GuiLayoutBeginVertical(gui, 0, 0)
 
   -- perk names
   for _, setting in ipairs(settings) do
-    local spacing = setting.type == "string"
-    if spacing then GuiLayoutAddVerticalSpacing(gui, 1) end
-
-    -- dim if unset
     local next = ModSettingGetNextValue(setting.key)
-    if not next or next == 0 or next == "" then
-      GuiOptionsAddForNextWidget(gui, GUI_OPTION.DrawSemiTransparent)
-    end
+    local is_default = not next or next == 0 or next == ""
 
+    GuiLayoutAddVerticalSpacing(gui, 1)
+    local alpha = is_default and 0.5 or 1
+    GuiOptionsAddForNextWidget(gui, GUI_OPTION.Layout_InsertOutsideLeft)
+    GuiImage(gui, get_id(), -3, -2, setting.icon, alpha, 1, 0)
+    if is_default then
+      GuiColorSetForNextWidget(gui, 1, 1, 1, alpha)
+    end
     GuiText(gui, 0, 0, setting.name)
     GuiTooltip(gui, setting.name, setting.desc)
-    if spacing then GuiLayoutAddVerticalSpacing(gui, 1) end
+    GuiLayoutAddVerticalSpacing(gui, 1)
   end
 
   GuiLayoutEnd(gui)
-
-  -- right side
+  GuiText(gui, 0, 0, " ")
   GuiLayoutBeginVertical(gui, 0, 0)
 
   for _, setting in ipairs(settings) do
+    GuiLayoutAddVerticalSpacing(gui, 1)
+
     local value = ModSettingGetNextValue(setting.key)
     if type(value) ~= setting.type then
       value = DEFAULT_VALUE[setting.type]
@@ -139,24 +140,22 @@ function ModSettingsGui(gui, in_main_menu)
       end
 
     else -- setting.type == "string"
-      GuiLayoutAddVerticalSpacing(gui, 1)
       local next_value = GuiTextInput(gui, get_id(), 0, 0, value, 64, 10, "0123456789")
-      GuiLayoutAddVerticalSpacing(gui, 1)
       if next_value ~= value then
         if next_value == "0" then next_value = "" end
         ModSettingSetNextValue(setting.key, next_value, false)
       end
     end
+
+    GuiLayoutAddVerticalSpacing(gui, 1)
   end
 
   GuiLayoutEnd(gui)
   GuiLayoutEnd(gui)
 
-  -- prevent mod from covering settings of other mods
-  for _, setting in ipairs(settings) do
-    local spacing = setting.type == "string"
-    if spacing then GuiLayoutAddVerticalSpacing(gui, 1) end
+  -- prevent overlap
+  for _ = 2, #settings do
     GuiText(gui, 0, 0, " ")
-    if spacing then GuiLayoutAddVerticalSpacing(gui, 1) end
+    GuiLayoutAddVerticalSpacing(gui, 2)
   end
 end
