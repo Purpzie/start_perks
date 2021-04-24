@@ -1,11 +1,11 @@
 dofile_once("data/scripts/lib/utilities.lua")
 dofile_once("data/scripts/lib/mod_settings.lua")
 dofile_once("data/scripts/perks/perk_list.lua")
-dofile_once("mods/start_perks/files/migrations.lua")
 function ModSettingsGuiCount() return 1 end
+-- local MIGRATIONS = {}
 
 local MOD_ID = "start_perks"
-local SETTINGS_VERSION = #MIGRATIONS + 1
+local SETTINGS_VERSION = 1
 local DEFAULT = {
   boolean = false,
   number = 0,
@@ -47,16 +47,22 @@ function ModSettingsUpdate(init_scope)
   local version = ModSettingGet("start_perks._version")
   if version ~= SETTINGS_VERSION then
     ModSettingSet("start_perks._version", SETTINGS_VERSION)
+    --[[
     for i = version or 1, SETTINGS_VERSION - 1 do
-      MIGRATIONS[i]()
+      if MIGRATIONS[i] then MIGRATIONS[i]() end
     end
+    --]]
   end
 
   for _, setting in ipairs(perk_settings) do
     local default = DEFAULT[setting.type]
     ModSettingSetNextValue(setting.key, default, true)
+    local next = ModSettingGetNextValue(setting.key)
+    if type(next) ~= setting.type then
+      next = default
+      ModSettingSetNextValue(setting.key, next, false)
+    end
     if setting.scope >= init_scope then
-      local next = ModSettingGetNextValue(setting.key)
       ModSettingSet(setting.key, next)
     end
   end
@@ -77,8 +83,8 @@ end
 
 function ModSettingsGui(gui, in_main_menu)
   widget_id = 0
+  GuiIdPushString(gui, "top")
   GuiOptionsAdd(gui, GUI_OPTION.DrawActiveWidgetCursorOnBothSides)
-  GuiIdPush(gui, 0)
 
   -- top row
   GuiLayoutBeginHorizontal(gui, 0, 0)
@@ -128,17 +134,17 @@ function ModSettingsGui(gui, in_main_menu)
   -- main area
   GuiLayoutBeginHorizontal(gui, 0, 0)
     -- icons and labels
-    GuiText(gui, 0, 0, "     ") -- space for icons
+    GuiIdPushString(gui, "labels")
+    GuiText(gui, 0, 0, "     ") -- spacing
     GuiLayoutBeginVertical(gui, 0, 0)
-      for _, setting in ipairs(perk_settings) do
+      for id, setting in ipairs(perk_settings) do
         if setting.hidden then goto continue end
         local val = ModSettingGetNextValue(setting.key)
         local alpha = val == DEFAULT[setting.type] and 0.5 or 1
 
         GuiLayoutAddVerticalSpacing(gui, 2)
-        GuiOptionsAddForNextWidget(gui, GUI_OPTION.Hack_AllowDuplicateIds)
         GuiOptionsAddForNextWidget(gui, GUI_OPTION.Layout_InsertOutsideLeft)
-        GuiImage(gui, 0, -3, -2, setting.icon, alpha, 1, 0)
+        GuiImage(gui, id, -3, -2, setting.icon, alpha, 1, 0)
         GuiColorSetForNextWidget(gui, 1, 1, 1, alpha)
         GuiText(gui, 0, 0, setting.name)
         GuiTooltip(gui, setting.name, setting.desc)
@@ -146,9 +152,8 @@ function ModSettingsGui(gui, in_main_menu)
         ::continue::
       end
     GuiLayoutEnd(gui)
-
-    -- spacing
-    GuiText(gui, 0, 0, " ")
+    GuiText(gui, 0, 0, " ") -- spacing
+    GuiIdPop(gui)
 
     -- right column (buttons)
     GuiLayoutBeginVertical(gui, 0, 0)
@@ -196,7 +201,7 @@ function ModSettingsGui(gui, in_main_menu)
 
   -- prevent overlap
   for _ = 2, num_visible do
-    GuiText(gui, 0, 0, " ")
     GuiLayoutAddVerticalSpacing(gui, 2)
+    GuiText(gui, 0, 0, " ")
   end
 end
