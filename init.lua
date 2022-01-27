@@ -1,6 +1,9 @@
 dofile_once("data/scripts/perks/perk_utilities.lua")
 dofile_once("data/scripts/perks/perk.lua")
-dofile_once("data/scripts/perks/perk_list.lua")
+
+function OnModPostInit()
+  dofile_once("data/scripts/perks/perk_list.lua")
+end
 
 function OnPlayerSpawned(player)
   if GlobalsGetValue("start_perks.new_game", "0") == "1" then return end

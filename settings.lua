@@ -4,33 +4,34 @@ dofile_once("data/scripts/lib/mod_settings.lua")
 dofile_once("data/scripts/perks/perk.lua")
 dofile("data/scripts/perks/perk_list.lua")
 
-local MOD_ID = "start_perks"
 local SETTINGS_VERSION = 1
 local DEFAULT = { boolean = false, number = 0, string = "" }
-
 local perk_settings = {}
 local dirty = false
 
 function ModSettingsUpdate(init_scope)
+  -- putting this here allows us to detect more perks
+  dofile("data/scripts/perks/perk_list.lua")
+
   -- migrations can go here in the future
-  local version = ModSettingGet(MOD_ID .. "._version")
+  local version = ModSettingGet("start_perks._version")
   if version ~= SETTINGS_VERSION then
-    ModSettingSet(MOD_ID .. "._version", SETTINGS_VERSION)
+    ModSettingSet("start_perks._version", SETTINGS_VERSION)
   end
 
   -- refresh perk list
   local hidden_states = {}
   for i, setting in ipairs(perk_settings) do
     hidden_states[setting.id] = setting.hidden
-    perk_settings[i] = nil
   end
+  perk_settings = {}
   for i, perk in ipairs(perk_list) do
     local setting = {
       id = perk.id,
       name = perk.ui_name,
       desc = perk.ui_description,
       icon = perk.ui_icon,
-      key = table.concat{MOD_ID, ".perk_", perk.id},
+      key = "start_perks.perk_" .. perk.id,
       hidden = hidden_states[perk.id] or false
     }
     if not perk.stackable then
@@ -55,12 +56,12 @@ function ModSettingsUpdate(init_scope)
       < GameTextGetTranslatedOrNot(b.name)
   end)
 
-  -- update everything if in the correct scope
+  -- update everything
+  for _, setting in ipairs(perk_settings) do
+    ModSettingSet(setting.key, ModSettingGetNextValue(setting.key))
+  end
   if init_scope <= MOD_SETTING_SCOPE_NEW_GAME then
     dirty = false
-    for _, setting in ipairs(perk_settings) do
-      ModSettingSet(setting.key, ModSettingGetNextValue(setting.key))
-    end
   end
 end
 
@@ -123,19 +124,19 @@ function ModSettingsGui(gui, in_main_menu)
   GuiText(gui, 0, 0, "     ") -- space for icons
   GuiLayoutBeginVertical(gui, 0, 0)
   for _, setting in ipairs(perk_settings) do
-    if setting.hidden then goto continue end
-    local value = ModSettingGetNextValue(setting.key)
-    local alpha = value == DEFAULT[setting.type] and 0.5 or 1
-    local name = GameTextGetTranslatedOrNot(setting.name)
-    local desc = GameTextGetTranslatedOrNot(setting.desc)
+    if not setting.hidden then
+      local value = ModSettingGetNextValue(setting.key)
+      local alpha = value == DEFAULT[setting.type] and 0.5 or 1
+      local name = GameTextGetTranslatedOrNot(setting.name)
+      local desc = GameTextGetTranslatedOrNot(setting.desc)
 
-    GuiLayoutAddVerticalSpacing(gui, 2)
-    GuiOptionsAddForNextWidget(gui, GUI_OPTION.Layout_InsertOutsideLeft)
-    GuiImage(gui, id(), -3, -2, setting.icon, alpha, 1, 0)
-    GuiColorSetForNextWidget(gui, 1, 1, 1, alpha)
-    GuiText(gui, 0, 0, name)
-    GuiTooltip(gui, name, desc)
-    ::continue::
+      GuiLayoutAddVerticalSpacing(gui, 2)
+      GuiOptionsAddForNextWidget(gui, GUI_OPTION.Layout_InsertOutsideLeft)
+      GuiImage(gui, id(), -3, -2, setting.icon, alpha, 1, 0)
+      GuiColorSetForNextWidget(gui, 1, 1, 1, alpha)
+      GuiText(gui, 0, 0, name)
+      GuiTooltip(gui, name, desc)
+    end
   end
   GuiLayoutEnd(gui)
 
@@ -143,39 +144,38 @@ function ModSettingsGui(gui, in_main_menu)
   GuiText(gui, 0, 0, "  ") -- don't get too close to labels
   GuiLayoutBeginVertical(gui, 0, 0)
   for _, setting in ipairs(perk_settings) do
-    if setting.hidden then goto continue end
+    if not setting.hidden then
+      local value = ModSettingGetNextValue(setting.key)
+      if type(value) ~= setting.type then
+        value = DEFAULT[setting.type]
+      end
 
-    local value = ModSettingGetNextValue(setting.key)
-    if type(value) ~= setting.type then
-      value = DEFAULT[setting.type]
+      GuiLayoutAddVerticalSpacing(gui, 2)
+      if setting.type == "boolean" then
+        local text = value and GameTextGet("$option_on") or GameTextGet("$option_off")
+        if GuiButton(gui, id(), 0, 0, text) then
+          dirty = true
+          ModSettingSetNextValue(setting.key, not value, false)
+        end
+      elseif setting.type == "number" then
+        GuiLayoutAddVerticalSpacing(gui, 1.5)
+        local next_value =
+          GuiSlider(gui, id(), -2, 0, "", value, 0, setting.max, 0, 1, " x$0 ", 64)
+        GuiLayoutAddVerticalSpacing(gui, 1.5)
+        if next_value ~= value then
+          dirty = true
+          ModSettingSetNextValue(setting.key, next_value, false)
+        end
+      else -- setting.type == "string"
+        local next_value = GuiTextInput(gui, id(), 0, 0, value, 64, 10, "0123456789")
+        if next_value ~= value then
+          dirty = true
+          if tonumber(next_value) == 0 then next_value = "" end
+          ModSettingSetNextValue(setting.key, next_value, false)
+        end
+
+      end
     end
-
-    GuiLayoutAddVerticalSpacing(gui, 2)
-    if setting.type == "boolean" then
-      local text = value and GameTextGet("$option_on") or GameTextGet("$option_off")
-      if GuiButton(gui, id(), 0, 0, text) then
-        dirty = true
-        ModSettingSetNextValue(setting.key, not value, false)
-      end
-    elseif setting.type == "number" then
-      GuiLayoutAddVerticalSpacing(gui, 1.5)
-      local next_value =
-        GuiSlider(gui, id(), -2, 0, "", value, 0, setting.max, 0, 1, " x$0 ", 64)
-      GuiLayoutAddVerticalSpacing(gui, 1.5)
-      if next_value ~= value then
-        dirty = true
-        ModSettingSetNextValue(setting.key, next_value, false)
-      end
-    else -- setting.type == "string"
-      local next_value = GuiTextInput(gui, id(), 0, 0, value, 64, 10, "0123456789")
-      if next_value ~= value then
-        dirty = true
-        if tonumber(next_value) == 0 then next_value = "" end
-        ModSettingSetNextValue(setting.key, next_value, false)
-      end
-
-    end
-    ::continue::
   end
   GuiLayoutEnd(gui) -- end widgets
   GuiLayoutEnd(gui) -- end main area
