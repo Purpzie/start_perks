@@ -4,7 +4,8 @@
 
 A small-ish mod for [Noita]. Choose any perks you want in mod settings, and they'll appear in new games.
 
-Modded perks are supported, just make sure to load this mod *after* any perk-changing mods.
+Modded perks are supported, just make sure to load this mod *after* any perk-changing mods. You may
+need to be ingame in order for them to show up.
 
 [steam workshop]: https://steamcommunity.com/workshop/filedetails/?id=2455667830
 [modworkshop]: https://modworkshop.net/mod/31800
